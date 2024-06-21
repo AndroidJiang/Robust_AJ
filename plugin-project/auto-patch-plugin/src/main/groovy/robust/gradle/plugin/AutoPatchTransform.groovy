@@ -1,6 +1,6 @@
 package robust.gradle.plugin
 
-import com.android.build.api.transform.*
+
 import com.android.build.gradle.internal.pipeline.TransformManager
 import com.meituan.robust.Constants
 import com.meituan.robust.autopatch.*
