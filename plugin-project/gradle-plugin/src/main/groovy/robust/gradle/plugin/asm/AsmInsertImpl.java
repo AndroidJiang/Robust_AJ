@@ -1,9 +1,9 @@
 package robust.gradle.plugin.asm;
 
-import com.android.utils.AsmUtils;
 import com.meituan.robust.ChangeQuickRedirect;
 import com.meituan.robust.Constants;
 
+import org.gradle.api.Project;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -39,10 +39,11 @@ import robust.gradle.plugin.InsertcodeStrategy;
  */
 
 public class AsmInsertImpl extends InsertcodeStrategy {
+    public static final String CONSTRUCTOR = "<init>";
+    public static final String CLASS_INITIALIZER = "<clinit>";
 
-
-    public AsmInsertImpl(List<String> hotfixPackageList, List<String> hotfixMethodList, List<String> exceptPackageList, List<String> exceptMethodList, boolean isHotfixMethodLevel, boolean isExceptMethodLevel, boolean isForceInsertLambda) {
-        super(hotfixPackageList, hotfixMethodList, exceptPackageList, exceptMethodList, isHotfixMethodLevel, isExceptMethodLevel, isForceInsertLambda);
+    public AsmInsertImpl(Project project,List<String> hotfixPackageList, List<String> hotfixMethodList, List<String> exceptPackageList, List<String> exceptMethodList, boolean isHotfixMethodLevel, boolean isExceptMethodLevel, boolean isForceInsertLambda) {
+        super(project,hotfixPackageList, hotfixMethodList, exceptPackageList, exceptMethodList, isHotfixMethodLevel, isExceptMethodLevel, isForceInsertLambda);
     }
 
     @Override
@@ -53,6 +54,7 @@ public class AsmInsertImpl extends InsertcodeStrategy {
             //change modifier to public ,so all the class in the apk will be public ,you will be able to access it in the patch
             ctClass.setModifiers(AccessFlag.setPublic(ctClass.getModifiers()));
             if (isNeedInsertClass(ctClass.getName()) && !(ctClass.isInterface() || ctClass.getDeclaredMethods().length < 1)) {
+                printLog("insertCode:" + ctClass.getName());
                 //only insert code into specific classes
                 zipFile(transformCode(ctClass.toBytecode(), ctClass.getName().replaceAll("\\.", "/")), outStream, ctClass.getName().replaceAll("\\.", "/") + ".class");
             } else {
@@ -120,7 +122,7 @@ public class AsmInsertImpl extends InsertcodeStrategy {
 
         private boolean isQualifiedMethod(int access, String name, String desc, Map<String, Boolean> c) {
             //类初始化函数和构造函数过滤
-            if (AsmUtils.CLASS_INITIALIZER.equals(name) || AsmUtils.CONSTRUCTOR.equals(name)) {
+            if (CLASS_INITIALIZER.equals(name) || CONSTRUCTOR.equals(name)) {
                 return false;
             }
             //@warn 这部分代码请重点review一下，判断条件写错会要命

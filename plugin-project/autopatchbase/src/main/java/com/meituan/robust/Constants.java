@@ -44,8 +44,8 @@ public class Constants {
     public static final String SMALI_INVOKE_SUPER_COMMAND = "invoke-super";
     public static final String SMALI_INVOKE_VIRTUAL_COMMAND = "invoke-virtual";
 
-    public static Class ModifyAnnotationClass = null;
-    public static Class AddAnnotationClass = null;
+    public static Class<?> ModifyAnnotationClass = null;
+    public static Class<?> AddAnnotationClass = null;
 
     public final static String[] LIB_NAME_ARRAY = {"baksmali-2.1.2.jar", "smali-2.1.2.jar", "dx.jar"};
     public static final String PACKNAME_END = ";";
@@ -59,7 +59,7 @@ public class Constants {
     public static boolean isLogging = true;
 
     public static final String PATCH_PACKAGENAME = "com.meituan.robust.patch";
-    public static final Set RFileClassSet = new HashSet();
+    public static final Set<String> RFileClassSet = new HashSet<>();
     public final static String ROBUST_XML = "robust.xml";
 
     static {
@@ -104,6 +104,7 @@ public class Constants {
     public static final String CHAR = "char";
 
     public static final String METHOD_MAP_OUT_PATH = "/outputs/robust/methodsMap.robust";
+    public static final String INSERT_CODE_PATH = "/outputs/robust/insertCode.log";
     public static final String INTERFACE_NAME = "com.meituan.robust.ChangeQuickRedirect";
     public static final String INSERT_FIELD_NAME = "changeQuickRedirect";
     public static final List<String> NO_NEED_REFLECT_CLASS = Arrays.asList("android.os.Bundle","android.os.BaseBundle");

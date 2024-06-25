@@ -1,6 +1,6 @@
 package robust.gradle.plugin
 
-
+import com.android.build.api.transform.*
 import com.android.build.gradle.internal.pipeline.TransformManager
 import com.meituan.robust.Constants
 import javassist.ClassPool
@@ -45,24 +45,24 @@ class RobustTransform extends Transform implements Plugin<Project> {
         //isForceInsert 是true的话，则强制执行插入
         if (!isForceInsert) {
             def taskNames = project.gradle.startParameter.taskNames
-            def isDebugTask = false;
-            for (int index = 0; index < taskNames.size(); ++index) {
-                def taskName = taskNames[index]
-                logger.debug "input start parameter task is ${taskName}"
-                //FIXME: assembleRelease下屏蔽Prepare，这里因为还没有执行Task，没法直接通过当前的BuildType来判断，所以直接分析当前的startParameter中的taskname，
-                //另外这里有一个小坑task的名字不能是缩写必须是全称 例如assembleDebug不能是任何形式的缩写输入
-                if (taskName.endsWith("Debug") && taskName.contains("Debug")) {
-//                    logger.warn " Don't register robust transform for debug model !!! task is：${taskName}"
-                    isDebugTask = true
-                    break;
-                }
-            }
-            if (!isDebugTask) {
-                project.android.registerTransform(this)
-                project.afterEvaluate(new RobustApkHashAction())
-                logger.quiet "Register robust transform successful !!!"
-            }
-            if (null != robust.switch.turnOnRobust && !"true".equals(String.valueOf(robust.switch.turnOnRobust))) {
+//            def isDebugTask = false;
+//            for (int index = 0; index < taskNames.size(); ++index) {
+//                def taskName = taskNames[index]
+//                logger.debug "input start parameter task is ${taskName}"
+//                //FIXME: assembleRelease下屏蔽Prepare，这里因为还没有执行Task，没法直接通过当前的BuildType来判断，所以直接分析当前的startParameter中的taskname，
+//                //另外这里有一个小坑task的名字不能是缩写必须是全称 例如assembleDebug不能是任何形式的缩写输入
+//                if (taskName.endsWith("Debug") && taskName.contains("Debug")) {
+////                    logger.warn " Don't register robust transform for debug model !!! task is：${taskName}"
+//                    isDebugTask = true
+//                    break;
+//                }
+//            }
+//            if (!isDebugTask) {
+//            }
+            project.android.registerTransform(this)
+            project.afterEvaluate(new RobustApkHashAction())
+            logger.quiet "Register robust transform successful !!!"
+            if (null != robust.switch.turnOnRobust && "true" != String.valueOf(robust.switch.turnOnRobust)) {
                 return;
             }
         } else {
@@ -162,9 +162,9 @@ class RobustTransform extends Transform implements Plugin<Project> {
         def cost = (System.currentTimeMillis() - startTime) / 1000
 //        logger.quiet "check all class cost $cost second, class count: ${box.size()}"
         if (useASM) {
-            insertcodeStrategy = new AsmInsertImpl(hotfixPackageList, hotfixMethodList, exceptPackageList, exceptMethodList, isHotfixMethodLevel, isExceptMethodLevel, isForceInsertLambda);
+            insertcodeStrategy = new AsmInsertImpl(project,hotfixPackageList, hotfixMethodList, exceptPackageList, exceptMethodList, isHotfixMethodLevel, isExceptMethodLevel, isForceInsertLambda);
         } else {
-            insertcodeStrategy = new JavaAssistInsertImpl(hotfixPackageList, hotfixMethodList, exceptPackageList, exceptMethodList, isHotfixMethodLevel, isExceptMethodLevel, isForceInsertLambda);
+            insertcodeStrategy = new JavaAssistInsertImpl(project,hotfixPackageList, hotfixMethodList, exceptPackageList, exceptMethodList, isHotfixMethodLevel, isExceptMethodLevel, isForceInsertLambda);
         }
         insertcodeStrategy.insertCode(box, jarFile);
         writeMap2File(insertcodeStrategy.methodMap, Constants.METHOD_MAP_OUT_PATH)

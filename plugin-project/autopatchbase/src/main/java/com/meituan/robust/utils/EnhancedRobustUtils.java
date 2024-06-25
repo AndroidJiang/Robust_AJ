@@ -13,10 +13,10 @@ import java.lang.reflect.Method;
 public class EnhancedRobustUtils {
     public static boolean isThrowable = true;
 
-    public static Object invokeReflectConstruct(String className, Object[] parameter, Class[] args) {
+    public static Object invokeReflectConstruct(String className, Object[] parameter, Class<?>[] args) {
         try {
-            Class clazz = Class.forName(className);
-            Constructor constructor = clazz.getDeclaredConstructor(args);
+            Class<?> clazz = Class.forName(className);
+            Constructor<?> constructor = clazz.getDeclaredConstructor(args);
             constructor.setAccessible(true);
             return constructor.newInstance(parameter);
         } catch (Exception e) {
@@ -28,7 +28,7 @@ public class EnhancedRobustUtils {
         return null;
     }
 
-    public static Object invokeReflectMethod(String methodName, Object targetObject, Object[] parameters, Class[] args, Class declaringClass) {
+    public static Object invokeReflectMethod(String methodName, Object targetObject, Object[] parameters, Class<?>[] args, Class declaringClass) {
         try {
             Method method = getDeclaredMethod(targetObject, methodName, args, declaringClass);
             return method.invoke(targetObject, parameters);
@@ -41,7 +41,7 @@ public class EnhancedRobustUtils {
         return null;
     }
 
-    public static Method getDeclaredMethod(Object object, String methodName, Class[] parameterTypes, Class declaringClass) {
+    public static Method getDeclaredMethod(Object object, String methodName, Class<?>[] parameterTypes, Class<?> declaringClass) {
         Method method = null;
         if (null == declaringClass || !declaringClass.isInterface()) {
 
@@ -71,7 +71,7 @@ public class EnhancedRobustUtils {
         return null;
     }
 
-    public static Object invokeReflectStaticMethod(String methodName, Class cl, Object[] parameter, Class[] args) {
+    public static Object invokeReflectStaticMethod(String methodName, Class<?> cl, Object[] parameter, Class<?>[] args) {
         try {
             Method method = cl.getDeclaredMethod(methodName, args);
             method.setAccessible(true);
@@ -86,7 +86,7 @@ public class EnhancedRobustUtils {
     }
 
 
-    public static void setFieldValue(String name, Object instance, int value, Class cl) {
+    public static void setFieldValue(String name, Object instance, int value, Class<?> cl) {
         try {
             getReflectField(name, instance, cl).setInt(instance, value);
         } catch (Exception e) {
@@ -98,7 +98,7 @@ public class EnhancedRobustUtils {
 
     }
 
-    public static void setFieldValue(String name, Object instance, boolean value, Class cl) {
+    public static void setFieldValue(String name, Object instance, boolean value, Class<?> cl) {
         try {
             getReflectField(name, instance, cl).setBoolean(instance, value);
         } catch (Exception e) {
@@ -109,7 +109,7 @@ public class EnhancedRobustUtils {
         }
     }
 
-    public static void setFieldValue(String name, Object instance, byte value, Class cl) {
+    public static void setFieldValue(String name, Object instance, byte value, Class<?> cl) {
         try {
             getReflectField(name, instance, cl).setByte(instance, value);
         } catch (Exception e) {
@@ -120,7 +120,7 @@ public class EnhancedRobustUtils {
         }
     }
 
-    public static void setFieldValue(String name, Object instance, char value, Class cl) {
+    public static void setFieldValue(String name, Object instance, char value, Class<?> cl) {
         try {
             getReflectField(name, instance, cl).setChar(instance, value);
         } catch (Exception e) {
@@ -131,7 +131,7 @@ public class EnhancedRobustUtils {
         }
     }
 
-    public static void setFieldValue(String name, Object instance, double value, Class cl) {
+    public static void setFieldValue(String name, Object instance, double value, Class<?> cl) {
         try {
             getReflectField(name, instance, cl).setDouble(instance, value);
         } catch (Exception e) {
@@ -142,7 +142,7 @@ public class EnhancedRobustUtils {
         }
     }
 
-    public static void setFieldValue(String name, Object instance, float value, Class cl) {
+    public static void setFieldValue(String name, Object instance, float value, Class<?> cl) {
         try {
             getReflectField(name, instance, cl).setFloat(instance, value);
         } catch (Exception e) {
@@ -153,7 +153,7 @@ public class EnhancedRobustUtils {
         }
     }
 
-    public static void setFieldValue(String name, Object instance, long value, Class cl) {
+    public static void setFieldValue(String name, Object instance, long value, Class<?> cl) {
         try {
             getReflectField(name, instance, cl).setLong(instance, value);
         } catch (Exception e) {
@@ -164,7 +164,7 @@ public class EnhancedRobustUtils {
         }
     }
 
-    public static void setFieldValue(String name, Object instance, Object value, Class cl) {
+    public static void setFieldValue(String name, Object instance, Object value, Class<?> cl) {
         try {
             getReflectField(name, instance, cl).set(instance, value);
         } catch (Exception e) {
@@ -175,7 +175,7 @@ public class EnhancedRobustUtils {
         }
     }
 
-    public static void setFieldValue(String name, Object instance, short value, Class cl) {
+    public static void setFieldValue(String name, Object instance, short value, Class<?> cl) {
         try {
             getReflectField(name, instance, cl).setShort(instance, value);
         } catch (Exception e) {
@@ -186,7 +186,7 @@ public class EnhancedRobustUtils {
         }
     }
 
-    public static void setStaticFieldValue(String name, Class clazz, Object value) {
+    public static void setStaticFieldValue(String name, Class<?> clazz, Object value) {
         try {
             getReflectStaticField(name, clazz).set(null, value);
         } catch (Exception e) {
@@ -197,7 +197,7 @@ public class EnhancedRobustUtils {
         }
     }
 
-    public static void setStaticFieldValue(String name, Class clazz, int value) {
+    public static void setStaticFieldValue(String name, Class<?> clazz, int value) {
         try {
             getReflectStaticField(name, clazz).setInt(null, value);
         } catch (Exception e) {
@@ -208,7 +208,7 @@ public class EnhancedRobustUtils {
         }
     }
 
-    public static void setStaticFieldValue(String name, Class clazz, boolean value) {
+    public static void setStaticFieldValue(String name, Class<?> clazz, boolean value) {
         try {
             getReflectStaticField(name, clazz).setBoolean(null, value);
         } catch (Exception e) {
@@ -219,7 +219,7 @@ public class EnhancedRobustUtils {
         }
     }
 
-    public static void setStaticFieldValue(String name, Class clazz, double value) {
+    public static void setStaticFieldValue(String name, Class<?> clazz, double value) {
         try {
             getReflectStaticField(name, clazz).setDouble(null, value);
         } catch (Exception e) {
@@ -230,7 +230,7 @@ public class EnhancedRobustUtils {
         }
     }
 
-    public static void setStaticFieldValue(String name, Class clazz, float value) {
+    public static void setStaticFieldValue(String name, Class<?> clazz, float value) {
         try {
             getReflectStaticField(name, clazz).setFloat(null, value);
         } catch (Exception e) {
@@ -241,7 +241,7 @@ public class EnhancedRobustUtils {
         }
     }
 
-    public static void setStaticFieldValue(String name, Class clazz, long value) {
+    public static void setStaticFieldValue(String name, Class<?> clazz, long value) {
         try {
             getReflectStaticField(name, clazz).setLong(null, value);
         } catch (Exception e) {
@@ -252,7 +252,7 @@ public class EnhancedRobustUtils {
         }
     }
 
-    public static Object getFieldValue(String name, Object instance, Class cl) {
+    public static Object getFieldValue(String name, Object instance, Class<?> cl) {
         try {
             return getReflectField(name, instance, cl).get(instance);
         } catch (Exception e) {
@@ -264,7 +264,7 @@ public class EnhancedRobustUtils {
         return null;
     }
 
-    private static Field getReflectField(String name, Object instance, Class cl) throws NoSuchFieldException {
+    private static Field getReflectField(String name, Object instance, Class<?> cl) throws NoSuchFieldException {
         if (cl == null) {
             if (isThrowable)
                 throw new RuntimeException("Field " + name + " declaring class is null ");
@@ -288,7 +288,7 @@ public class EnhancedRobustUtils {
     }
 
 
-    public static Object getStaticFieldValue(String name, Class clazz) {
+    public static Object getStaticFieldValue(String name, Class<?> clazz) {
         try {
             Field field = getReflectStaticField(name, clazz);
             return field.get(null);
@@ -301,7 +301,7 @@ public class EnhancedRobustUtils {
         return null;
     }
 
-    private static Field getReflectStaticField(String name, Class clazz) throws NoSuchFieldException {
+    private static Field getReflectStaticField(String name, Class<?> clazz) throws NoSuchFieldException {
         try {
             Field field = clazz.getDeclaredField(name);
             if (!field.isAccessible()) {

@@ -14,6 +14,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.meituan.robust.patch.annotaion.Add;
+import com.meituan.robust.patch.annotaion.Modify;
 
 import java.lang.reflect.Field;
 
@@ -43,14 +44,14 @@ public class SecondActivity extends AppCompatActivity implements View.OnClickLis
         printLog("robust", new String[][]{new String[]{"1", "2", "3"}, new String[]{"4", "5", "6"}});
     }
 
-//    @Modify
+    @Modify
     public String getTextInfo() {
         getArray();
-        return "error occur " ;
-//        return "error fixed";
+//        return "error occur " ;
+        return "error fixed";
     }
 
-    @Add
+//    @Add
     public String[] getArray() {
        return new String[]{"hello","world"};
     }

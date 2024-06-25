@@ -1,5 +1,6 @@
 package com.meituan.sample;
 
+import android.content.ComponentName;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -54,8 +55,26 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.jump_second_activity).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                try {
+                    Thread.sleep(50000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 Intent intent = new Intent(MainActivity.this, SecondActivity.class);
                 startActivity(intent);
+
+//                Intent intent2=new  Intent();
+////                intent2.putExtra("icCache",true);
+////                intent2.putExtra("source","thirdCollection");
+////                intent2.putExtra("isLoadWelcome",true);
+////                intent2.putExtra("contentId","1208325");
+////                intent2.putExtra("type","videoPlayDetail");
+////                intent2.putExtra("isSearchDS","1");
+////                intent2.putExtra("content_id","1208325");
+//                intent2.putExtra("content_id","20201111001");
+//                intent2.putExtra("extraParams","{\"contentId\":\"20201111001\",\"type\":\"gameDetail\",\"source\":\"thirdHistory\",\"isSearchDS\":\"1\"}");
+//                intent2.setComponent(new ComponentName("com.cmgame.gamehalltv", "com.cmgame.gamehalltv.WelcomeActivity"));
+//                startActivity(intent2);
             }
         });
 

@@ -1,11 +1,12 @@
 package robust.gradle.plugin
 
-
+import com.android.build.api.transform.*
 import com.android.build.gradle.internal.pipeline.TransformManager
 import com.meituan.robust.Constants
 import com.meituan.robust.autopatch.*
 import com.meituan.robust.utils.JavaUtils
 import com.meituan.robust.utils.SmaliTool
+import com.meituan.robust.utils.ZipUtils
 import javassist.CannotCompileException
 import javassist.CtClass
 import javassist.CtMethod
@@ -17,7 +18,9 @@ import org.gradle.api.logging.Logger
 
 import java.util.zip.Deflater
 import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
+
 /**
  * Created by mivanzhang on 16/7/21.
  *
@@ -30,6 +33,8 @@ class AutoPatchTransform extends Transform implements Plugin<Project> {
     static String smali2DexCommand;
     private
     static String jar2DexCommand;
+    static String jarPath;
+    static String dexJarPath;
     public static String ROBUST_DIR;
     Project project
     static Logger logger
@@ -50,14 +55,23 @@ class AutoPatchTransform extends Transform implements Plugin<Project> {
         Config.init();
 
         ROBUST_DIR = "${project.projectDir}${File.separator}robust${File.separator}"
+
         def baksmaliFilePath = "${ROBUST_DIR}${Constants.LIB_NAME_ARRAY[0]}"
         def smaliFilePath = "${ROBUST_DIR}${Constants.LIB_NAME_ARRAY[1]}"
         def dxFilePath = "${ROBUST_DIR}${Constants.LIB_NAME_ARRAY[2]}"
         Config.robustGenerateDirectory = "${project.buildDir}" + File.separator + "$Constants.ROBUST_GENERATE_DIRECTORY" + File.separator;
         dex2SmaliCommand = "  java -jar ${baksmaliFilePath} -o classout" + File.separator + "  $Constants.CLASSES_DEX_NAME";
-        smali2DexCommand = "   java -jar ${smaliFilePath} classout" + File.separator + " -o "+Constants.PATACH_DEX_NAME;
-        jar2DexCommand = "   java -jar ${dxFilePath} --dex --output=$Constants.CLASSES_DEX_NAME  " + Constants.ZIP_FILE_NAME;
-        ReadXML.readXMl(project.projectDir.path);
+        smali2DexCommand = "   java -jar ${smaliFilePath} classout" + File.separator + " -o " + Constants.PATACH_DEX_NAME;
+//        jar2DexCommand = "   java -jar ${dxFilePath} --dex --output=$Constants.CLASSES_DEX_NAME  " + Constants.ZIP_FILE_NAME;
+        jarPath = "${project.buildDir.path}/outputs/robust/${Constants.ZIP_FILE_NAME}"
+        dexJarPath = "${project.buildDir.path}/outputs/robust/classes.jar"
+        jar2DexCommand = "${jarPath} --output ${dexJarPath}"
+
+        try {
+            ReadXML.readXMl(project.projectDir.path);
+        } catch (Exception e) {
+
+        }
         Config.methodMap = JavaUtils.getMapFromZippedFile(project.projectDir.path + Constants.METHOD_MAP_PATH)
     }
 
@@ -94,13 +108,13 @@ class AutoPatchTransform extends Transform implements Plugin<Project> {
         def box = ReflectUtils.toCtClasses(inputs, Config.classPool)
         def cost = (System.currentTimeMillis() - startTime) / 1000
         logger.quiet "check all class cost $cost second, class count: ${box.size()}"
-        autoPatch(box)
+        def patch = autoPatch(box)
 //        JavaUtils.removeJarFromLibs()
         logger.quiet '================method singure to methodid is printed below================'
         JavaUtils.printMap(Config.methodMap)
         cost = (System.currentTimeMillis() - startTime) / 1000
         logger.quiet "autoPatch cost $cost second"
-        throw new RuntimeException("auto patch end successfully")
+        throw new RuntimeException("auto patch end successfully,patch in " + patch)
     }
 
     static def copyJarToRobust() {
@@ -115,13 +129,28 @@ class AutoPatchTransform extends Transform implements Plugin<Project> {
                 continue;
             }
             File inputFile = new File(ROBUST_DIR + libName);
+            OutputStream inputFileOut
             try {
-                OutputStream inputFileOut = new FileOutputStream(inputFile);
+                inputFileOut = new FileOutputStream(inputFile);
                 JavaUtils.copy(inputStream, inputFileOut);
             } catch (Exception e) {
                 e.printStackTrace();
                 System.out.println("Warning!!! " + libName + " copy error " + e.getMessage());
-
+            } finally {
+                if (inputStream != null) {
+                    try {
+                        inputStream.close()
+                    } catch (Exception e) {
+                        println "close inputStream failed"
+                    }
+                }
+                if (inputFileOut != null) {
+                    try {
+                        inputFileOut.close()
+                    } catch (Exception e) {
+                        println "close inputFileOut failed"
+                    }
+                }
             }
         }
     }
@@ -131,24 +160,40 @@ class AutoPatchTransform extends Transform implements Plugin<Project> {
         String patchPath = buildDir.getAbsolutePath() + File.separator + Constants.ROBUST_GENERATE_DIRECTORY + File.separator;
         clearPatchPath(patchPath);
         ReadAnnotation.readAnnotation(box, logger);
-        if(Config.supportProGuard) {
+        if (Config.supportProGuard) {
             ReadMapping.getInstance().initMappingInfo();
         }
 
-        generatPatch(box,patchPath);
+        generatPatch(box, patchPath);
 
         zipPatchClassesFile()
-        executeCommand(jar2DexCommand)
+
+        println(jar2DexCommand)
+        def split = jar2DexCommand.split(" ")
+        println(split.toString())
+
+        try {
+            com.android.tools.r8.D8.main(split)
+            def zipFile = new ZipFile(dexJarPath)
+            def zipEntry = zipFile.getEntry("classes.dex")
+            ZipUtils.extract(zipFile, zipEntry, new File(new File(dexJarPath).parent, Constants.CLASSES_DEX_NAME))
+        } catch (Exception e) {
+            println "jar2dex error"
+            throw new IllegalStateException("编译失败，注解不能打在生命周期方法上")
+        }
+
         executeCommand(dex2SmaliCommand)
         SmaliTool.getInstance().dealObscureInSmali();
         executeCommand(smali2DexCommand)
         //package patch.dex to patch.jar
-        packagePatchDex2Jar()
+        def file = packagePatchDex2Jar()
         deleteTmpFiles()
+        return file
     }
-    def  zipPatchClassesFile(){
-        ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(Config.robustGenerateDirectory+ Constants.ZIP_FILE_NAME));
-        zipAllPatchClasses(Config.robustGenerateDirectory+Config.patchPackageName.substring(0,Config.patchPackageName.indexOf(".")),"",zipOut);
+
+    def zipPatchClassesFile() {
+        ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(Config.robustGenerateDirectory + Constants.ZIP_FILE_NAME));
+        zipAllPatchClasses(Config.robustGenerateDirectory + Config.patchPackageName.substring(0, Config.patchPackageName.indexOf(".")), "", zipOut);
         zipOut.close();
 
     }
@@ -156,27 +201,27 @@ class AutoPatchTransform extends Transform implements Plugin<Project> {
     def zipAllPatchClasses(String path, String fullClassName, ZipOutputStream zipOut) {
         File file = new File(path);
         if (file.exists()) {
-            fullClassName=fullClassName+file.name;
+            fullClassName = fullClassName + file.name;
             if (file.isDirectory()) {
-                fullClassName+=File.separator;
+                fullClassName += File.separator;
                 File[] files = file.listFiles();
                 if (files.length == 0) {
                     return;
                 } else {
                     for (File file2 : files) {
-                        zipAllPatchClasses(file2.getAbsolutePath(),fullClassName,zipOut);
+                        zipAllPatchClasses(file2.getAbsolutePath(), fullClassName, zipOut);
                     }
                 }
             } else {
                 //文件
-                zipFile(file,zipOut, fullClassName);
+                zipFile(file, zipOut, fullClassName);
             }
         } else {
             logger.debug("文件不存在!");
         }
     }
 
-    def  generatPatch(List<CtClass> box,String patchPath){
+    def generatPatch(List<CtClass> box, String patchPath) {
         if (!Config.isManual) {
             if (Config.patchMethodSignatureSet.size() < 1) {
                 throw new RuntimeException(" patch method is empty ,please check your Modify annotation or use RobustModify.modify() to mark modified methods")
@@ -201,20 +246,21 @@ class AutoPatchTransform extends Transform implements Plugin<Project> {
         }
 
     }
-    def deleteTmpFiles(){
-        File diretcory=new File(Config.robustGenerateDirectory);
-        if(!diretcory.isDirectory()){
-            throw new RuntimeException("patch directry "+Config.robustGenerateDirectory+" dones not exist");
-        }else{
+
+    def deleteTmpFiles() {
+        File diretcory = new File(Config.robustGenerateDirectory);
+        if (!diretcory.isDirectory()) {
+            throw new RuntimeException("patch directry " + Config.robustGenerateDirectory + " dones not exist");
+        } else {
             diretcory.listFiles(new FilenameFilter() {
                 @Override
                 boolean accept(File file, String s) {
                     return !(Constants.PATACH_JAR_NAME.equals(s))
                 }
             }).each {
-                if(it.isDirectory()){
+                if (it.isDirectory()) {
                     it.deleteDir()
-                }else {
+                } else {
                     it.delete()
                 }
             }
@@ -249,7 +295,7 @@ class AutoPatchTransform extends Transform implements Plugin<Project> {
             modifiedCtClass = Config.classPool.get(modifiedFullClassName);
             modifiedCtClass.defrost();
             modifiedCtClass.declaredMethods.findAll {
-                return Config.patchMethodSignatureSet.contains(it.longName)||InlineClassFactory.allInLineMethodLongname.contains(it.longName);
+                return Config.patchMethodSignatureSet.contains(it.longName) || InlineClassFactory.allInLineMethodLongname.contains(it.longName);
             }.each { behavior ->
                 behavior.instrument(new ExprEditor() {
                     @Override
@@ -278,23 +324,26 @@ class AutoPatchTransform extends Transform implements Plugin<Project> {
         PatchesInfoFactory.createPatchesInfo().writeFile(patchPath);
     }
 
-    def  clearPatchPath(String patchPath) {
+    def clearPatchPath(String patchPath) {
         new File(patchPath).deleteDir();
     }
 
-    def  packagePatchDex2Jar() throws IOException {
-        File inputFile=new File(Config.robustGenerateDirectory, Constants.PATACH_DEX_NAME);
+    def packagePatchDex2Jar() throws IOException {
+        File inputFile = new File(Config.robustGenerateDirectory, Constants.PATACH_DEX_NAME);
         if (!inputFile.exists() || !inputFile.canRead()) {
             throw new RuntimeException("patch.dex is not exists or readable")
         }
-        ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(new File(Config.robustGenerateDirectory, Constants.PATACH_JAR_NAME)))
+
+        def file = new File(Config.robustGenerateDirectory, Constants.PATACH_JAR_NAME)
+        ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(file))
         zipOut.setLevel(Deflater.NO_COMPRESSION)
         FileInputStream fis = new FileInputStream(inputFile)
-        zipFile(inputFile,zipOut,Constants.CLASSES_DEX_NAME);
+        zipFile(inputFile, zipOut, Constants.CLASSES_DEX_NAME);
         zipOut.close()
+        return file
     }
 
-    def zipFile(File inputFile, ZipOutputStream zos, String entryName){
+    def zipFile(File inputFile, ZipOutputStream zos, String entryName) {
         ZipEntry entry = new ZipEntry(entryName);
         zos.putNextEntry(entry);
         FileInputStream fis = new FileInputStream(inputFile)

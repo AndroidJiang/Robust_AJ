@@ -1,5 +1,7 @@
 package com.meituan.robust.autopatch;
 
+import static com.meituan.robust.Constants.DEFAULT_MAPPING_FILE;
+
 import com.meituan.robust.Constants;
 
 import java.util.ArrayList;
@@ -13,8 +15,6 @@ import java.util.Set;
 import javassist.ClassPool;
 import javassist.CtMethod;
 
-import static com.meituan.robust.Constants.DEFAULT_MAPPING_FILE;
-
 /**
  * Created by mivanzhang on 16/12/2.
  * <p>
@@ -23,7 +23,7 @@ import static com.meituan.robust.Constants.DEFAULT_MAPPING_FILE;
 
 public final class Config {
     public static boolean catchReflectException = false;
-    public static boolean supportProGuard = true;
+    public static boolean supportProGuard = false;
     public static boolean isLogging = true;
     public static boolean isManual = false;
     public static String patchPackageName = Constants.PATCH_PACKAGENAME;
@@ -59,7 +59,7 @@ public final class Config {
         addedSuperMethodList = new ArrayList<>();
         noNeedReflectClassSet = new HashSet<>();
         noNeedReflectClassSet.addAll(Constants.NO_NEED_REFLECT_CLASS);
-        supportProGuard=true;
+        supportProGuard=false;
     }
 
 }
